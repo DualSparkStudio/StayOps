@@ -21,6 +21,7 @@ try {
 }
 
 export const handler = async (event, context) => {
+  console.log('Environment check:', {
     SUPABASE_URL: process.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
     SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing'
   })

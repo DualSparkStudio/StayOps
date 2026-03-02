@@ -100,7 +100,7 @@ async function handleUpdateProfile(data, headers, supabase) {
 
     
     const { password_hash, ...adminData } = updatedAdmin
-    const userData = {
+    const userResponse = {
       ...adminData,
       is_admin: true
     }
@@ -110,7 +110,7 @@ async function handleUpdateProfile(data, headers, supabase) {
       headers,
       body: JSON.stringify({
         success: true,
-        user: userData,
+        user: userResponse,
         message: 'Profile updated successfully'
       })
     }
