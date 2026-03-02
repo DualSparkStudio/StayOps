@@ -29,6 +29,7 @@ export const handler = async (event, context) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const propertyId = process.env.DEFAULT_PROPERTY_ID || '1';
 
     // Get all confirmed and pending bookings from database
     const { data: bookings, error: bookingsError } = await supabase
@@ -46,6 +47,7 @@ export const handler = async (event, context) => {
       `)
       .in('booking_status', ['confirmed', 'pending'])
       .eq('booking_source', 'website') // Only website bookings
+      .eq('property_id', propertyId)
       .order('check_in_date', { ascending: true });
 
     if (bookingsError) {
@@ -57,6 +59,7 @@ export const handler = async (event, context) => {
       .from('blocked_dates')
       .select('id, start_date, end_date, reason, notes, room_id, rooms!inner(name)')
       .eq('source', 'manual') // Only manual blocked dates
+      .eq('property_id', propertyId)
       .order('start_date', { ascending: true });
 
     if (blockedError) {

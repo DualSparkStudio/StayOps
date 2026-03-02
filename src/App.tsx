@@ -20,6 +20,13 @@ import AdminMaintenance from './pages/AdminMaintenance';
 import AdminProfile from './pages/AdminProfile';
 import AdminReviews from './pages/AdminReviews';
 import AdminRooms from './pages/AdminRooms';
+import AdminQRCategories from './pages/AdminQRCategories';
+import AdminQRMenuItems from './pages/AdminQRMenuItems';
+import AdminQROrders from './pages/AdminQROrders';
+import AdminRoomQRCodes from './pages/AdminRoomQRCodes';
+import QRServiceMenu from './pages/QRServiceMenu';
+import QROrderConfirmation from './pages/QROrderConfirmation';
+import QROrderTracking from './pages/QROrderTracking';
 import BookingCancel from './pages/BookingCancel';
 import BookingConfirmation from './pages/BookingConfirmation';
 import BookingForm from './pages/BookingForm';
@@ -107,7 +114,16 @@ const AppContent: React.FC = () => {
         <Route path="faq" element={<AdminFAQ />} />
         <Route path="house-rules" element={<AdminHouseRules />} />
         <Route path="maintenance" element={<AdminMaintenance />} />
+        <Route path="qr-categories" element={<AdminQRCategories />} />
+        <Route path="qr-menu" element={<AdminQRMenuItems />} />
+        <Route path="qr-orders" element={<AdminQROrders />} />
+        <Route path="qr-codes" element={<AdminRoomQRCodes />} />
       </Route>
+
+      {/* QR Service Guest Routes */}
+      <Route path="/qr/:qrCode" element={<QRServiceMenu />} />
+      <Route path="/qr-order/:orderId" element={<QROrderConfirmation />} />
+      <Route path="/qr-track/:orderId" element={<QROrderTracking />} />
     </Routes>
   );
 };

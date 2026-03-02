@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 
+// Helper function to get property_id from request data or use default
+function getPropertyId(data) {
+  return data.property_id || process.env.DEFAULT_PROPERTY_ID || '00000000-0000-0000-0000-000000000001'
+}
+
 export const handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -69,12 +74,15 @@ export const handler = async (event, context) => {
 async function handleLogin(email, password, headers, supabase, supabaseAdmin) {
   try {
 
+    const propertyId = process.env.DEFAULT_PROPERTY_ID || '1'
+
     // First, try the new admin table
     const { data: admin, error: adminError } = await supabase
       .from('admin')
       .select('*')
       .eq('email', email)
       .eq('is_active', true)
+      .eq('property_id', propertyId)
       .single()
 
     if (admin && !adminError) {
@@ -115,6 +123,7 @@ async function handleLogin(email, password, headers, supabase, supabaseAdmin) {
           const { data: userProfile, error: profileError } = await supabase
             .from('users')
             .select('*')
+            .eq('property_id', propertyId)
             .eq('email', email)
             .single()
 
@@ -160,12 +169,14 @@ async function handleUpdateProfile(userData, headers, supabase, supabaseAdmin) {
   try {
     
     const { id, first_name, last_name, email, phone } = userData
+    const propertyId = getPropertyId(userData)
 
     // Check if this is an admin table user
     const { data: admin, error: adminError } = await supabase
       .from('admin')
       .select('*')
       .eq('id', id)
+      .eq('property_id', propertyId)
       .single()
 
     if (admin && !adminError) {
@@ -176,6 +187,7 @@ async function handleUpdateProfile(userData, headers, supabase, supabaseAdmin) {
           .from('admin')
           .select('id')
           .eq('email', email)
+          .eq('property_id', propertyId)
           .neq('id', id)
           .single()
 
@@ -199,6 +211,7 @@ async function handleUpdateProfile(userData, headers, supabase, supabaseAdmin) {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
+        .eq('property_id', propertyId)
         .select()
         .single()
 
@@ -239,6 +252,7 @@ async function handleUpdateProfile(userData, headers, supabase, supabaseAdmin) {
           phone,
           updated_at: new Date().toISOString()
         })
+        .eq('property_id', propertyId)
         .eq('id', id)
         .select()
         .single()
@@ -301,12 +315,14 @@ async function handleChangePassword(userData, headers, supabase, supabaseAdmin) 
   try {
     
     const { id, current_password, new_password } = userData
+    const propertyId = getPropertyId(userData)
 
     // Check if this is an admin table user
     const { data: admin, error: adminError } = await supabase
       .from('admin')
       .select('*')
       .eq('id', id)
+      .eq('property_id', propertyId)
       .single()
 
     if (admin && !adminError) {
@@ -334,6 +350,7 @@ async function handleChangePassword(userData, headers, supabase, supabaseAdmin) 
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
+        .eq('property_id', propertyId)
 
       if (updateError) {
         return {
@@ -423,12 +440,15 @@ async function handleChangePassword(userData, headers, supabase, supabaseAdmin) 
 async function handleForgotPassword(email, headers, supabase, supabaseAdmin) {
   try {
 
+    const propertyId = process.env.DEFAULT_PROPERTY_ID || '1'
+
     // Check if admin exists in new table
     const { data: admin, error: adminError } = await supabase
       .from('admin')
       .select('id, email')
       .eq('email', email)
       .eq('is_active', true)
+      .eq('property_id', propertyId)
       .single()
 
     if (admin && !adminError) {
@@ -533,12 +553,15 @@ async function handleForgotPassword(email, headers, supabase, supabaseAdmin) {
 async function handleMigrateToAdmin(email, headers, supabase, supabaseAdmin) {
   try {
 
+    const propertyId = process.env.DEFAULT_PROPERTY_ID || '1'
+
     // Find existing user
     const { data: existingUser, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('email', email)
       .eq('is_admin', true)
+      .eq('property_id', propertyId)
       .single()
 
     if (userError || !existingUser) {
@@ -557,7 +580,8 @@ async function handleMigrateToAdmin(email, headers, supabase, supabaseAdmin) {
         password_hash: '$2a$10$temp_hash_placeholder', // Will be updated
         first_name: existingUser.first_name,
         last_name: existingUser.last_name,
-        phone: existingUser.phone
+        phone: existingUser.phone,
+        property_id: propertyId
       })
       .select()
       .single()
@@ -572,11 +596,8 @@ async function handleMigrateToAdmin(email, headers, supabase, supabaseAdmin) {
 
     // Update existing data to use new admin_id
     const updates = [
-      supabase.from('bookings').update({ admin_id: newAdmin.id }).eq('user_id', existingUser.id),
-      supabase.from('reviews').update({ admin_id: newAdmin.id }).eq('user_id', existingUser.id),
-      supabase.from('blocked_dates').update({ admin_id: newAdmin.id }).eq('user_id', existingUser.id),
-      supabase.from('calendar_syncs').update({ admin_id: newAdmin.id }).eq('user_id', existingUser.id),
-      supabase.from('settings').update({ admin_id: newAdmin.id }).eq('user_id', existingUser.id)
+      supabase.from('bookings').update({ admin_id: newAdmin.id }).eq('property_id', propertyId).eq('user_id', existingUser.id),
+      supabase.from('blocked_dates').update({ admin_id: newAdmin.id }).eq('property_id', propertyId).eq('user_id', existingUser.id)
     ]
 
     for (const update of updates) {

@@ -2,6 +2,7 @@ import { Bars3Icon, CheckIcon, PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { usePropertyId } from '../contexts/PropertyContext';
 import { supabase } from '../lib/supabase';
 
 interface HouseRule {
@@ -15,6 +16,7 @@ interface HouseRule {
 
 const AdminHouseRules: React.FC = () => {
   const { user } = useAuth();
+  const propertyId = usePropertyId();
   const [houseRules, setHouseRules] = useState<HouseRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -26,8 +28,10 @@ const AdminHouseRules: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchHouseRules();
-  }, []);
+    if (propertyId) {
+      fetchHouseRules();
+    }
+  }, [propertyId]);
 
   const fetchHouseRules = async () => {
     try {
@@ -35,6 +39,7 @@ const AdminHouseRules: React.FC = () => {
       const { data, error } = await supabase
         .from('house_rules')
         .select('*')
+        .eq('property_id', propertyId)
         .order('order_num', { ascending: true });
 
       if (error) {
@@ -73,7 +78,8 @@ const AdminHouseRules: React.FC = () => {
             rule_text: formData.rule_text.trim(),
             updated_at: new Date().toISOString()
           })
-          .eq('id', editingId);
+          .eq('id', editingId)
+          .eq('property_id', propertyId);
 
         if (error) {
           toast.error('Failed to update house rule');
@@ -91,6 +97,7 @@ const AdminHouseRules: React.FC = () => {
             rule_text: formData.rule_text.trim(),
             order_num: houseRules.length + 1,
             is_active: true,
+            property_id: propertyId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
@@ -142,7 +149,8 @@ const AdminHouseRules: React.FC = () => {
                 const { error } = await supabase
                   .from('house_rules')
                   .delete()
-                  .eq('id', id);
+                  .eq('id', id)
+                  .eq('property_id', propertyId);
 
                 if (error) {
                   toast.error(`Failed to delete house rule: ${error.message}`);
@@ -232,7 +240,8 @@ const AdminHouseRules: React.FC = () => {
         const { error } = await supabase
           .from('house_rules')
           .update({ order_num: update.order_num })
-          .eq('id', update.id);
+          .eq('id', update.id)
+          .eq('property_id', propertyId);
 
         if (error) {
           toast.error('Failed to update order');
@@ -263,7 +272,8 @@ const AdminHouseRules: React.FC = () => {
           is_active: !houseRule.is_active,
           updated_at: new Date().toISOString()
         })
-        .eq('id', houseRule.id);
+        .eq('id', houseRule.id)
+        .eq('property_id', propertyId);
 
       if (error) {
         toast.error('Failed to update house rule status');

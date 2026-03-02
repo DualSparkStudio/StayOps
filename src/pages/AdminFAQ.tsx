@@ -1,6 +1,7 @@
 import { Bars3Icon, CheckIcon, PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { usePropertyId } from '../contexts/PropertyContext';
 import { supabase } from '../lib/supabase';
 
 interface FAQ {
@@ -14,6 +15,7 @@ interface FAQ {
 }
 
 const AdminFAQ: React.FC = () => {
+  const propertyId = usePropertyId();
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -25,8 +27,10 @@ const AdminFAQ: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchFAQs();
-  }, []);
+    if (propertyId) {
+      fetchFAQs();
+    }
+  }, [propertyId]);
 
   const fetchFAQs = async () => {
     try {
@@ -34,6 +38,7 @@ const AdminFAQ: React.FC = () => {
       const { data, error } = await supabase
         .from('faqs')
         .select('*')
+        .eq('property_id', propertyId)
         .order('order_num', { ascending: true });
 
       if (error) {
@@ -67,7 +72,8 @@ const AdminFAQ: React.FC = () => {
             answer: formData.answer.trim(),
             updated_at: new Date().toISOString()
           })
-          .eq('id', editingId);
+          .eq('id', editingId)
+          .eq('property_id', propertyId);
 
         if (error) {
           toast.error('Failed to update FAQ');
@@ -85,6 +91,7 @@ const AdminFAQ: React.FC = () => {
             answer: formData.answer.trim(),
             order_num: faqs.length + 1,
             is_active: true,
+            property_id: propertyId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
@@ -127,7 +134,8 @@ const AdminFAQ: React.FC = () => {
                 const { error } = await supabase
                   .from('faqs')
                   .delete()
-                  .eq('id', id);
+                  .eq('id', id)
+                  .eq('property_id', propertyId);
 
                 if (error) {
                   toast.error('Failed to delete FAQ');
@@ -201,7 +209,8 @@ const AdminFAQ: React.FC = () => {
         const { error } = await supabase
           .from('faqs')
           .update({ order_num: faq.order_num })
-          .eq('id', faq.id);
+          .eq('id', faq.id)
+          .eq('property_id', propertyId);
 
         if (error) {
           toast.error('Failed to update FAQ order');
@@ -226,7 +235,8 @@ const AdminFAQ: React.FC = () => {
           is_active: !faq.is_active,
           updated_at: new Date().toISOString()
         })
-        .eq('id', faq.id);
+        .eq('id', faq.id)
+        .eq('property_id', propertyId);
 
       if (error) {
         toast.error(`Failed to update FAQ status: ${error.message}`);

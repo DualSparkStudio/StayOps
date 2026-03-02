@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import Preloader from './components/Preloader'
+import { PropertyProvider } from './contexts/PropertyContext'
 
 // Suppress React DevTools message and other development noise
 const originalWarn = console.warn
@@ -69,7 +70,9 @@ function Root() {
       {isLoading ? (
         <Preloader onComplete={() => setIsLoading(false)} />
       ) : (
-        <App />
+        <PropertyProvider>
+          <App />
+        </PropertyProvider>
       )}
     </StrictMode>
   )

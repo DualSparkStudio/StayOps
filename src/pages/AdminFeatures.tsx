@@ -9,6 +9,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import { usePropertyId } from '../contexts/PropertyContext';
 
 interface Feature {
   id?: number;
@@ -28,6 +29,7 @@ const AdminFeatures: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const propertyId = usePropertyId();
 
   const [formData, setFormData] = useState<Feature>({
     title: '',
@@ -79,8 +81,10 @@ const AdminFeatures: React.FC = () => {
   ];
 
   useEffect(() => {
-    fetchFeatures();
-  }, []);
+    if (propertyId) {
+      fetchFeatures();
+    }
+  }, [propertyId]);
 
   const fetchFeatures = async () => {
     try {
@@ -88,6 +92,7 @@ const AdminFeatures: React.FC = () => {
       const { data, error } = await supabase
         .from('features')
         .select('*')
+        .eq('property_id', propertyId)
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: false });
 
@@ -109,6 +114,7 @@ const AdminFeatures: React.FC = () => {
         const { error } = await supabase
           .from('features')
           .update(formData)
+          .eq('property_id', propertyId)
           .eq('id', editingFeature.id);
 
         if (error) throw error;
@@ -117,7 +123,7 @@ const AdminFeatures: React.FC = () => {
         // Create new feature
         const { error } = await supabase
           .from('features')
-          .insert([formData]);
+          .insert([{ ...formData, property_id: propertyId }]);
 
         if (error) throw error;
         toast.success('Feature added successfully');
@@ -157,6 +163,7 @@ const AdminFeatures: React.FC = () => {
                 const { data, error } = await supabase
                   .from('features')
                   .delete()
+                  .eq('property_id', propertyId)
                   .eq('id', id)
                   .select();
 

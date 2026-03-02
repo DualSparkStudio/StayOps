@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Helper function to get property_id from request data or use default
+function getPropertyId(data) {
+  return data?.property_id || process.env.DEFAULT_PROPERTY_ID || '00000000-0000-0000-0000-000000000001'
+}
+
 // Initialize Supabase client with error handling
 let supabase
 try {
@@ -109,6 +114,8 @@ export const handler = async (event, context) => {
 async function handleLogin(email, password, headers) {
   try {
     
+    const propertyId = process.env.DEFAULT_PROPERTY_ID || '1'
+
     // Use Supabase's built-in authentication
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email,
@@ -135,6 +142,7 @@ async function handleLogin(email, password, headers) {
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('email', email)
       .single()
 
@@ -177,6 +185,7 @@ async function handleRegister(userData, headers) {
   try {
     
     const { email, password, first_name, last_name, phone } = userData
+    const propertyId = getPropertyId(userData)
 
     // Use Supabase's built-in authentication to create user
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -210,6 +219,7 @@ async function handleRegister(userData, headers) {
         last_name: last_name || '',
         phone: phone || '',
         is_admin: false, // Default to regular user
+        property_id: propertyId,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -249,6 +259,7 @@ async function handleUpdateProfile(userData, headers) {
   try {
     
     const { id, first_name, last_name, email, phone } = userData
+    const propertyId = getPropertyId(userData)
 
     // Validate required fields
     if (!id) {
@@ -282,6 +293,7 @@ async function handleUpdateProfile(userData, headers) {
         phone,
         updated_at: new Date().toISOString()
       })
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -428,10 +440,13 @@ async function handleChangePassword(userData, headers) {
 async function handleGetUser(email, headers) {
   try {
     
+    const propertyId = process.env.DEFAULT_PROPERTY_ID || '1'
+
     // Get user from database
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('email', email)
       .single()
 

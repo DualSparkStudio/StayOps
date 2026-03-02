@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { requirePropertyId } from './supabase-multi-tenant'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -169,9 +170,11 @@ export const api = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
     
+    const propertyId = requirePropertyId()
     const { data, error } = await supabase
       .from('users')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('id', user.id)
       .single()
     
@@ -180,9 +183,10 @@ export const api = {
   },
 
   async createUser(userData: Partial<User>) {
+    const propertyId = requirePropertyId()
     const { data, error } = await supabase
       .from('users')
-      .insert([userData])
+      .insert([{ ...userData, property_id: propertyId }])
       .select()
       .single()
 
@@ -191,9 +195,11 @@ export const api = {
   },
 
   async updateUser(id: number, updates: Partial<User>) {
+    const propertyId = requirePropertyId()
     const { data, error } = await supabase
       .from('users')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -204,9 +210,11 @@ export const api = {
 
   // Room Management
   async getRooms() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('rooms')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('is_active', true)
       .order('room_number')
 
@@ -215,9 +223,11 @@ export const api = {
   },
 
   async getRoom(id: number) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('rooms')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('id', id)
       .maybeSingle()
 
@@ -226,9 +236,10 @@ export const api = {
   },
 
   async createRoom(roomData: Partial<Room>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('rooms')
-      .insert([roomData])
+      .insert([{ ...roomData, property_id: propertyId }])
       .select()
       .single()
 
@@ -237,9 +248,11 @@ export const api = {
   },
 
   async updateRoom(id: number, updates: Partial<Room>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('rooms')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -249,18 +262,22 @@ export const api = {
   },
 
   async deleteRoom(id: number) {
+    const propertyId = requirePropertyId();
     const { error } = await supabase
       .from('rooms')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', id)
 
     if (error) throw error
   },
 
   async getAllRooms() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('rooms')
       .select('*')
+      .eq('property_id', propertyId)
       .order('room_number')
 
     if (error) throw error
@@ -268,15 +285,18 @@ export const api = {
   },
 
   async getAvailableRooms(roomId: number, checkIn: string, checkOut: string) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('rooms')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('id', roomId)
       .eq('is_active', true)
       .not('id', 'in', `(
         SELECT DISTINCT room_id 
         FROM bookings 
-        WHERE booking_status IN ('confirmed', 'pending')
+        WHERE property_id = '${propertyId}'
+        AND booking_status IN ('confirmed', 'pending')
         AND (
           (check_in_date <= '${checkIn}' AND check_out_date > '${checkIn}')
           OR (check_in_date < '${checkOut}' AND check_out_date >= '${checkOut}')
@@ -289,12 +309,14 @@ export const api = {
   },
 
   async getAvailabilityForMonth(roomId: number, year: number, month: number) {
+    const propertyId = requirePropertyId();
     const startDate = `${year}-${month.toString().padStart(2, '0')}-01`
     const endDate = new Date(year, month, 0).toISOString().split('T')[0]
 
     const { data, error } = await supabase
       .from('bookings')
       .select('check_in_date, check_out_date, booking_status')
+      .eq('property_id', propertyId)
       .eq('room_id', roomId)
       .gte('check_in_date', startDate)
       .lte('check_out_date', endDate)
@@ -306,6 +328,7 @@ export const api = {
 
   // Booking Management
   async getBookings(userId?: number) {
+    const propertyId = requirePropertyId();
     let query = supabase
       .from('bookings')
       .select(`
@@ -313,6 +336,7 @@ export const api = {
         room:rooms(*),
         user:users(*)
       `)
+      .eq('property_id', propertyId)
       .order('created_at', { ascending: false })
 
     if (userId) {
@@ -325,6 +349,7 @@ export const api = {
   },
 
   async getBooking(id: number) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('bookings')
       .select(`
@@ -332,6 +357,7 @@ export const api = {
         room:rooms(*),
         user:users(*)
       `)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .maybeSingle()
 
@@ -340,9 +366,10 @@ export const api = {
   },
 
   async createBooking(bookingData: Partial<Booking>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('bookings')
-      .insert([bookingData])
+      .insert([{ ...bookingData, property_id: propertyId }])
       .select(`
         *,
         room:rooms(*)
@@ -354,9 +381,11 @@ export const api = {
   },
 
   async updateBooking(id: number, updates: Partial<Booking>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('bookings')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -366,9 +395,11 @@ export const api = {
   },
 
   async cancelBooking(id: number) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('bookings')
       .update({ booking_status: 'cancelled' })
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -378,9 +409,11 @@ export const api = {
   },
 
   async deleteBooking(id: number) {
+    const propertyId = requirePropertyId();
     const { error } = await supabase
       .from('bookings')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', id)
 
     if (error) throw error
@@ -388,9 +421,11 @@ export const api = {
 
   // Facility Management
   async getFacilities() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('facilities')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('is_active', true)
       .order('name')
 
@@ -399,9 +434,11 @@ export const api = {
   },
 
   async getFeatures() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('features')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('is_active', true)
       .order('display_order')
 
@@ -410,9 +447,11 @@ export const api = {
   },
 
   async getAllFacilities() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('facilities')
       .select('*')
+      .eq('property_id', propertyId)
       .order('name')
 
     if (error) throw error
@@ -420,9 +459,10 @@ export const api = {
   },
 
   async createFacility(facilityData: Partial<Facility>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('facilities')
-      .insert([facilityData])
+      .insert([{ ...facilityData, property_id: propertyId }])
       .select()
       .single()
 
@@ -431,9 +471,11 @@ export const api = {
   },
 
   async updateFacility(id: number, updates: Partial<Facility>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('facilities')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -443,9 +485,11 @@ export const api = {
   },
 
   async deleteFacility(id: number) {
+    const propertyId = requirePropertyId();
     const { error } = await supabase
       .from('facilities')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', id)
 
     if (error) throw error
@@ -453,9 +497,11 @@ export const api = {
 
   // Testimonial Management
   async getTestimonials() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('testimonials')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
@@ -464,9 +510,11 @@ export const api = {
   },
 
   async getFeaturedTestimonials() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('testimonials')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('is_active', true)
       .eq('is_featured', true)
       .order('created_at', { ascending: false })
@@ -482,9 +530,10 @@ export const api = {
     is_featured?: boolean
     is_active?: boolean
   }) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('testimonials')
-      .insert([testimonialData])
+      .insert([{ ...testimonialData, property_id: propertyId }])
       .select()
       .single()
 
@@ -493,9 +542,11 @@ export const api = {
   },
 
   async getAllTestimonials() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('testimonials')
       .select('*')
+      .eq('property_id', propertyId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -503,9 +554,11 @@ export const api = {
   },
 
   async updateTestimonial(id: number, updates: Partial<Testimonial>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('testimonials')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -515,9 +568,11 @@ export const api = {
   },
 
   async deleteTestimonial(id: number) {
+    const propertyId = requirePropertyId();
     const { error } = await supabase
       .from('testimonials')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', id)
 
     if (error) throw error
@@ -525,9 +580,10 @@ export const api = {
 
   // Contact Message Management
   async createContactMessage(messageData: Partial<ContactMessage>) {
+    const propertyId = requirePropertyId()
     const { data, error } = await supabase
       .from('contact_messages')
-      .insert([messageData])
+      .insert([{ ...messageData, property_id: propertyId }])
       .select()
       .single()
 
@@ -536,9 +592,11 @@ export const api = {
   },
 
   async getContactMessages() {
+    const propertyId = requirePropertyId()
     const { data, error } = await supabase
       .from('contact_messages')
       .select('*')
+      .eq('property_id', propertyId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -547,6 +605,7 @@ export const api = {
 
   // Dashboard Stats
   async getDashboardStats() {
+    const propertyId = requirePropertyId();
     const [
       { count: totalBookings },
       { count: confirmedBookings },
@@ -554,11 +613,11 @@ export const api = {
       { count: totalRooms },
       { count: totalUsers }
     ] = await Promise.all([
-      supabase.from('bookings').select('*', { count: 'exact', head: true }),
-      supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('booking_status', 'confirmed'),
-      supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('booking_status', 'pending'),
-      supabase.from('rooms').select('*', { count: 'exact', head: true }).eq('is_active', true),
-      supabase.from('users').select('*', { count: 'exact', head: true })
+      supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('property_id', propertyId),
+      supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('property_id', propertyId).eq('booking_status', 'confirmed'),
+      supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('property_id', propertyId).eq('booking_status', 'pending'),
+      supabase.from('rooms').select('*', { count: 'exact', head: true }).eq('property_id', propertyId).eq('is_active', true),
+      supabase.from('users').select('*', { count: 'exact', head: true }).eq('property_id', propertyId)
     ])
 
     return {
@@ -572,9 +631,11 @@ export const api = {
 
   // User Management (Admin)
   async getAllUsers() {
+    const propertyId = requirePropertyId()
     const { data, error } = await supabase
       .from('users')
       .select('*')
+      .eq('property_id', propertyId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -582,9 +643,11 @@ export const api = {
   },
 
   async updateUserRole(userId: number, isAdmin: boolean) {
+    const propertyId = requirePropertyId()
     const { data, error } = await supabase
       .from('users')
       .update({ is_admin: isAdmin })
+      .eq('property_id', propertyId)
       .eq('id', userId)
       .select()
       .single()
@@ -594,9 +657,11 @@ export const api = {
   },
 
   async getUserByEmail(email: string) {
+    const propertyId = requirePropertyId()
     const { data, error } = await supabase
       .from('users')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('email', email)
       .maybeSingle()
 
@@ -606,9 +671,11 @@ export const api = {
 
   // Room Images
   async getRoomImages(room_id: number) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('room_images')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('room_id', room_id)
       .order('sort_order')
 
@@ -617,9 +684,10 @@ export const api = {
   },
 
   async addRoomImages(room_id: number, images: { image_url: string, alt_text?: string, is_primary?: boolean, sort_order?: number }[]) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('room_images')
-      .insert(images.map(img => ({ ...img, room_id })))
+      .insert(images.map(img => ({ ...img, room_id, property_id: propertyId })))
       .select()
 
     if (error) throw error
@@ -627,9 +695,11 @@ export const api = {
   },
 
   async updateRoomImage(id: number, updates: { image_url?: string, alt_text?: string, is_primary?: boolean, sort_order?: number }) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('room_images')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -639,9 +709,11 @@ export const api = {
   },
 
   async deleteRoomImage(id: number) {
+    const propertyId = requirePropertyId();
     const { error } = await supabase
       .from('room_images')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', id)
 
     if (error) throw error
@@ -649,9 +721,11 @@ export const api = {
 
   // Resort Closures
   async getResortClosures() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('resort_closures')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('is_active', true)
       .order('start_date')
 
@@ -660,9 +734,10 @@ export const api = {
   },
 
   async createResortClosure(closureData: Partial<ResortClosure>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('resort_closures')
-      .insert([closureData])
+      .insert([{ ...closureData, property_id: propertyId }])
       .select()
       .single()
 
@@ -671,9 +746,11 @@ export const api = {
   },
 
   async updateResortClosure(id: number, updates: Partial<ResortClosure>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('resort_closures')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -683,9 +760,11 @@ export const api = {
   },
 
   async deleteResortClosure(id: number) {
+    const propertyId = requirePropertyId();
     const { error } = await supabase
       .from('resort_closures')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', id)
 
     if (error) throw error
@@ -714,9 +793,11 @@ export const api = {
 
   // Social Media Links
   async getSocialMediaLinks() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('social_media_links')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('is_active', true)
       .order('display_order')
 
@@ -725,9 +806,11 @@ export const api = {
   },
 
   async getAllSocialMediaLinks() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('social_media_links')
       .select('*')
+      .eq('property_id', propertyId)
       .order('display_order')
 
     if (error) throw error
@@ -735,9 +818,10 @@ export const api = {
   },
 
   async createSocialMediaLink(linkData: Partial<SocialMediaLink>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('social_media_links')
-      .insert([linkData])
+      .insert([{ ...linkData, property_id: propertyId }])
       .select()
       .single()
 
@@ -746,9 +830,11 @@ export const api = {
   },
 
   async updateSocialMediaLink(id: number, updates: Partial<SocialMediaLink>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('social_media_links')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -758,9 +844,11 @@ export const api = {
   },
 
   async deleteSocialMediaLink(id: number) {
+    const propertyId = requirePropertyId();
     const { error } = await supabase
       .from('social_media_links')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', id)
 
     if (error) throw error
@@ -768,9 +856,11 @@ export const api = {
 
   // Tourist Attractions
   async getTouristAttractions() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('attractions')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
@@ -779,9 +869,11 @@ export const api = {
   },
 
   async getAllTouristAttractions() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('attractions')
       .select('*')
+      .eq('property_id', propertyId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -789,9 +881,10 @@ export const api = {
   },
 
   async createTouristAttraction(attractionData: Partial<TouristAttraction>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('attractions')
-      .insert([attractionData])
+      .insert([{ ...attractionData, property_id: propertyId }])
       .select()
       .single()
 
@@ -800,9 +893,11 @@ export const api = {
   },
 
   async updateTouristAttraction(id: number, updates: Partial<TouristAttraction>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('attractions')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -812,9 +907,11 @@ export const api = {
   },
 
   async deleteTouristAttraction(id: number) {
+    const propertyId = requirePropertyId();
     const { error } = await supabase
       .from('attractions')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', id)
 
     if (error) throw error
@@ -822,12 +919,14 @@ export const api = {
 
   // WhatsApp Sessions
   async getWhatsAppSessions() {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('whatsapp_sessions')
       .select(`
         *,
         user:users(*)
       `)
+      .eq('property_id', propertyId)
       .eq('session_status', 'active')
       .order('last_message_at', { ascending: false })
 
@@ -836,12 +935,14 @@ export const api = {
   },
 
   async getWhatsAppMessages(sessionId: number) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('whatsapp_messages')
       .select(`
         *,
         session:whatsapp_sessions(*)
       `)
+      .eq('property_id', propertyId)
       .eq('session_id', sessionId)
       .order('created_at')
 
@@ -850,9 +951,10 @@ export const api = {
   },
 
   async createWhatsAppSession(sessionData: Partial<WhatsAppSession>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('whatsapp_sessions')
-      .insert([sessionData])
+      .insert([{ ...sessionData, property_id: propertyId }])
       .select()
       .single()
 
@@ -861,9 +963,10 @@ export const api = {
   },
 
   async createWhatsAppMessage(messageData: Partial<WhatsAppMessage>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('whatsapp_messages')
-      .insert([messageData])
+      .insert([{ ...messageData, property_id: propertyId }])
       .select()
       .single()
 
@@ -872,9 +975,11 @@ export const api = {
   },
 
   async updateWhatsAppSession(id: number, updates: Partial<WhatsAppSession>) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('whatsapp_sessions')
       .update(updates)
+      .eq('property_id', propertyId)
       .eq('id', id)
       .select()
       .single()
@@ -890,9 +995,10 @@ export const api = {
     end_date: string
     reason: string
   }) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('blocked_dates')
-      .insert([blockData])
+      .insert([{ ...blockData, property_id: propertyId }])
       .select()
       .single()
 
@@ -901,12 +1007,14 @@ export const api = {
   },
 
   async getAvailabilityCalendar(roomId?: number, startDate?: string, endDate?: string) {
+    const propertyId = requirePropertyId();
     let query = supabase
       .from('bookings')
       .select(`
         *,
         room:rooms(*)
       `)
+      .eq('property_id', propertyId)
       .in('booking_status', ['confirmed', 'pending'])
 
     if (roomId) {
@@ -931,9 +1039,11 @@ export const api = {
     reason: string
     notes?: string
   }) {
+    const propertyId = requirePropertyId();
     const { data, error } = await supabase
       .from('blocked_dates')
       .insert([{
+        property_id: propertyId,
         room_id: parseInt(blockData.room_id),
         start_date: blockData.start_date,
         end_date: blockData.end_date,
@@ -948,9 +1058,11 @@ export const api = {
   },
 
   async getBlockedDates(roomId?: number) {
+    const propertyId = requirePropertyId();
     let query = supabase
       .from('blocked_dates')
       .select('*')
+      .eq('property_id', propertyId)
       .order('start_date')
 
     if (roomId) {
@@ -963,9 +1075,11 @@ export const api = {
   },
 
   async unblockDates(blockedDateId: number) {
+    const propertyId = requirePropertyId();
     const { error } = await supabase
       .from('blocked_dates')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', blockedDateId)
 
     if (error) throw error

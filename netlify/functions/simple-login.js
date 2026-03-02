@@ -1,9 +1,17 @@
 const { createClient } = require('@supabase/supabase-js')
 
+// Helper to get property_id from request data or use default
+function getPropertyId(data) {
+  // For now, use the default property ID from environment or hardcoded
+  // In production, this should come from the request context/subdomain
+  return data.property_id || process.env.DEFAULT_PROPERTY_ID || '00000000-0000-0000-0000-000000000001'
+}
+
 // Helper function to verify admin authentication
 async function verifyAdmin(data, supabase) {
   try {
     const { userId, email } = data
+    const propertyId = getPropertyId(data)
     
     if (!userId && !email) {
       return { isValid: false, error: 'Authentication required' }
@@ -14,6 +22,7 @@ async function verifyAdmin(data, supabase) {
       const { data: admin } = await supabase
         .from('admin')
         .select('id, email, is_active')
+        .eq('property_id', propertyId)
         .eq('email', email)
         .eq('is_active', true)
         .single()
@@ -27,6 +36,7 @@ async function verifyAdmin(data, supabase) {
     const query = supabase
       .from('users')
       .select('id, email, is_admin')
+      .eq('property_id', propertyId)
       .eq('is_admin', true)
     
     if (userId) {
@@ -187,6 +197,7 @@ exports.handler = async (event, context) => {
 async function handleLogin(data, headers, supabase) {
   try {
     const { email, password } = data
+    const propertyId = getPropertyId(data)
 
     // Input validation
     if (!validateEmail(email)) {
@@ -209,6 +220,7 @@ async function handleLogin(data, headers, supabase) {
     const { data: admin, error: adminError } = await supabase
       .from('admin')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('email', email)
       .eq('is_active', true)
       .single()
@@ -241,6 +253,7 @@ async function handleLogin(data, headers, supabase) {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('email', email)
       .eq('is_admin', true) // ONLY allow admin users
       .single()
@@ -285,11 +298,13 @@ async function handleRegister(data, headers, supabase) {
   try {
     const { userData } = data
     const { email, password, first_name, last_name } = userData
+    const propertyId = getPropertyId(data)
 
     // Check if user already exists
     const { data: existingUser } = await supabase
       .from('users')
       .select('id')
+      .eq('property_id', propertyId)
       .eq('email', email)
       .single()
 
@@ -317,7 +332,8 @@ async function handleRegister(data, headers, supabase) {
         password_hash: passwordHash,
         first_name,
         last_name,
-        is_admin: false // Default to regular user
+        is_admin: false, // Default to regular user
+        property_id: propertyId
       }])
       .select()
       .single()
@@ -365,6 +381,7 @@ async function handleCreateRoom(data, headers, supabase) {
     }
 
     const { roomData } = data
+    const propertyId = getPropertyId(data)
 
     // Input validation
     if (!roomData || typeof roomData !== 'object') {
@@ -387,7 +404,7 @@ async function handleCreateRoom(data, headers, supabase) {
     // Try to create room with images field first
     let { data: newRoom, error } = await supabase
       .from('rooms')
-      .insert([roomData])
+      .insert([{ ...roomData, property_id: propertyId }])
       .select()
       .single()
 
@@ -396,7 +413,7 @@ async function handleCreateRoom(data, headers, supabase) {
       const { images, ...roomDataWithoutImages } = roomData
       const { data: newRoomWithoutImages, error: errorWithoutImages } = await supabase
         .from('rooms')
-        .insert([roomDataWithoutImages])
+        .insert([{ ...roomDataWithoutImages, property_id: propertyId }])
         .select()
         .single()
       
@@ -438,10 +455,12 @@ async function handleCreateRoom(data, headers, supabase) {
 
 async function handleGetAllRooms(data, headers, supabase) {
   try {
+    const propertyId = getPropertyId(data)
 
     const { data: rooms, error } = await supabase
       .from('rooms')
       .select('*')
+      .eq('property_id', propertyId)
       .order('room_number')
 
     if (error) {
@@ -485,6 +504,7 @@ async function handleUpdateRoom(data, headers, supabase) {
     }
 
     const { roomId, roomData } = data
+    const propertyId = getPropertyId(data)
 
     // Input validation
     if (!validateNumber(roomId, 1)) {
@@ -507,6 +527,7 @@ async function handleUpdateRoom(data, headers, supabase) {
     let { data: updatedRoom, error } = await supabase
       .from('rooms')
       .update(roomData)
+      .eq('property_id', propertyId)
       .eq('id', roomId)
       .select()
       .single()
@@ -517,6 +538,7 @@ async function handleUpdateRoom(data, headers, supabase) {
       const { data: updatedRoomWithoutImages, error: errorWithoutImages } = await supabase
         .from('rooms')
         .update(roomDataWithoutImages)
+        .eq('property_id', propertyId)
         .eq('id', roomId)
         .select()
         .single()
@@ -570,6 +592,7 @@ async function handleDeleteRoom(data, headers, supabase) {
     }
 
     const { roomId } = data
+    const propertyId = getPropertyId(data)
 
     // Input validation
     if (!validateNumber(roomId, 1)) {
@@ -583,6 +606,7 @@ async function handleDeleteRoom(data, headers, supabase) {
     const { error } = await supabase
       .from('rooms')
       .delete()
+      .eq('property_id', propertyId)
       .eq('id', roomId)
 
     if (error) {
@@ -627,11 +651,13 @@ async function handleUpdateProfile(data, headers, supabase) {
     }
 
     console.log('Updating profile for user ID:', userData.id)
+    const propertyId = getPropertyId(data)
 
     // First check if user exists and is admin
     const { data: existingUser, error: fetchError } = await supabase
       .from('users')
       .select('id, is_admin')
+      .eq('property_id', propertyId)
       .eq('id', userData.id)
       .single()
 
@@ -676,6 +702,7 @@ async function handleUpdateProfile(data, headers, supabase) {
     const { data: updatedUser, error } = await supabase
       .from('users')
       .update(updateData)
+      .eq('property_id', propertyId)
       .eq('id', userData.id)
       .select()
       .single()
@@ -761,10 +788,13 @@ async function handleChangePassword(data, headers, supabase) {
       }
     }
 
+    const propertyId = getPropertyId(data)
+
     // Get current user
     const { data: user, error: fetchError } = await supabase
       .from('users')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('id', userData.id)
       .single()
 
@@ -797,6 +827,7 @@ async function handleChangePassword(data, headers, supabase) {
       .update({
         password_hash: newPasswordHash
       })
+      .eq('property_id', propertyId)
       .eq('id', userData.id)
 
     if (updateError) {
@@ -828,11 +859,13 @@ async function handleChangePassword(data, headers, supabase) {
 async function handleGetUser(data, headers, supabase) {
   try {
     const { id } = data
+    const propertyId = getPropertyId(data)
 
     // Get user by ID
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
+      .eq('property_id', propertyId)
       .eq('id', id)
       .single()
 
@@ -868,11 +901,13 @@ async function handleGetUser(data, headers, supabase) {
 async function handleCheckEmail(data, headers, supabase) {
   try {
     const { email } = data
+    const propertyId = getPropertyId(data)
 
     // Check if user exists with this email
     const { data: user, error } = await supabase
       .from('users')
       .select('id, email')
+      .eq('property_id', propertyId)
       .eq('email', email)
       .single()
 
@@ -908,6 +943,7 @@ async function handleCheckEmail(data, headers, supabase) {
 async function handleResetPassword(data, headers, supabase) {
   try {
     const { email, new_password } = data
+    const propertyId = getPropertyId(data)
 
     // Validate password
     if (!new_password || new_password.length < 8) {
@@ -922,6 +958,7 @@ async function handleResetPassword(data, headers, supabase) {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, email')
+      .eq('property_id', propertyId)
       .eq('email', email)
       .single()
 
@@ -941,6 +978,7 @@ async function handleResetPassword(data, headers, supabase) {
     const { error: updateError } = await supabase
       .from('users')
       .update({ password_hash: passwordHash })
+      .eq('property_id', propertyId)
       .eq('email', email)
 
     if (updateError) {
@@ -1024,10 +1062,13 @@ async function handleSubmitContactForm(data, headers, supabase) {
       message: sanitizeString(contactData.message)
     }
 
+    const propertyId = getPropertyId(data)
+
     // Get admin email from database
     const { data: adminUser, error: adminError } = await supabase
       .from('users')
       .select('email, phone, first_name, last_name')
+      .eq('property_id', propertyId)
       .eq('is_admin', true)
       .single()
 
@@ -1102,11 +1143,13 @@ async function handleSubmitContactForm(data, headers, supabase) {
 
 async function handleGetAdminEmail(data, headers, supabase) {
   try {
+    const propertyId = getPropertyId(data)
 
     // Get admin email from database
     const { data: adminUser, error } = await supabase
       .from('users')
       .select('email')
+      .eq('property_id', propertyId)
       .eq('is_admin', true)
       .single()
 
@@ -1150,6 +1193,7 @@ async function handleUpdateAdminEmail(data, headers, supabase) {
     }
 
     const { email } = data
+    const propertyId = getPropertyId(data)
 
     // Input validation
     if (!validateEmail(email)) {
@@ -1164,6 +1208,7 @@ async function handleUpdateAdminEmail(data, headers, supabase) {
     const { error } = await supabase
       .from('users')
       .update({ email: email.trim() })
+      .eq('property_id', propertyId)
       .eq('is_admin', true)
 
     if (error) {
@@ -1194,11 +1239,13 @@ async function handleUpdateAdminEmail(data, headers, supabase) {
 
 async function handleGetAdminContactInfo(data, headers, supabase) {
   try {
+    const propertyId = getPropertyId(data)
 
     // Get admin contact info from database
     const { data: adminUser, error } = await supabase
       .from('users')
       .select('email, phone, first_name, last_name')
+      .eq('property_id', propertyId)
       .eq('is_admin', true)
       .single()
 

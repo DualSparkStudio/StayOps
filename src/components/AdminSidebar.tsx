@@ -6,6 +6,7 @@ import {
     DocumentTextIcon,
     HomeIcon,
     MapPinIcon,
+    QrCodeIcon,
     QuestionMarkCircleIcon,
     SparklesIcon,
     StarIcon,
@@ -31,6 +32,16 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onClose }) => {
     { name: 'Bookings', href: '/admin/bookings', icon: CalendarIcon },
     { name: 'Calendar', href: '/admin/calendar', icon: CalendarIcon },
     { name: 'Reviews', href: '/admin/reviews', icon: StarIcon },
+    { 
+      name: 'QR Service', 
+      icon: QrCodeIcon,
+      children: [
+        { name: 'Categories', href: '/admin/qr-categories' },
+        { name: 'Menu Items', href: '/admin/qr-menu' },
+        { name: 'Orders', href: '/admin/qr-orders' },
+        { name: 'QR Codes', href: '/admin/qr-codes' }
+      ]
+    },
     { name: 'FAQ', href: '/admin/faq', icon: QuestionMarkCircleIcon },
     { name: 'House Rules', href: '/admin/house-rules', icon: DocumentTextIcon },
     { name: 'Maintenance', href: '/admin/maintenance', icon: WrenchScrewdriverIcon },
@@ -109,23 +120,51 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onClose }) => {
       {/* Navigation - Scrollable if needed */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {navigation.map((item) => (
-          <Link
-            key={item.name}
-            to={item.href}
-            onClick={handleLinkClick}
-            className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${
-              isActive(item.href)
-                ? 'bg-gradient-to-r from-dark-blue-800 to-golden-500 text-white shadow-md'
-                : 'text-white/70 hover:bg-dark-blue-700 hover:text-golden'
-            }`}
-          >
-            <item.icon
-              className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                isActive(item.href) ? 'text-white' : 'text-white/50 group-hover:text-golden'
-              }`}
-            />
-            {item.name}
-          </Link>
+          <div key={item.name}>
+            {item.children ? (
+              // Menu with submenu
+              <div>
+                <div className="group flex items-center px-3 py-2.5 text-sm font-medium text-white/70 rounded-lg">
+                  <item.icon className="mr-3 h-5 w-5 flex-shrink-0 text-white/50" />
+                  {item.name}
+                </div>
+                <div className="ml-8 space-y-1">
+                  {item.children.map((child) => (
+                    <Link
+                      key={child.name}
+                      to={child.href}
+                      onClick={handleLinkClick}
+                      className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                        isActive(child.href)
+                          ? 'bg-gradient-to-r from-dark-blue-800 to-golden-500 text-white shadow-md'
+                          : 'text-white/70 hover:bg-dark-blue-700 hover:text-golden'
+                      }`}
+                    >
+                      {child.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              // Regular menu item
+              <Link
+                to={item.href}
+                onClick={handleLinkClick}
+                className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                  isActive(item.href)
+                    ? 'bg-gradient-to-r from-dark-blue-800 to-golden-500 text-white shadow-md'
+                    : 'text-white/70 hover:bg-dark-blue-700 hover:text-golden'
+                }`}
+              >
+                <item.icon
+                  className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                    isActive(item.href) ? 'text-white' : 'text-white/50 group-hover:text-golden'
+                  }`}
+                />
+                {item.name}
+              </Link>
+            )}
+          </div>
         ))}
       </nav>
 

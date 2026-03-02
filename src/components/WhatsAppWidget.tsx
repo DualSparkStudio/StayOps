@@ -1,19 +1,24 @@
 import { ChatBubbleLeftRightIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import React, { useEffect, useState } from 'react'
+import { usePropertyId } from '../contexts/PropertyContext'
 import { supabase } from '../lib/supabase'
 
 const WhatsAppWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [whatsappNumber, setWhatsappNumber] = useState('+919876543210') // Default fallback
+  const propertyId = usePropertyId()
   
   // Fetch admin phone number for WhatsApp
   useEffect(() => {
+    if (!propertyId) return
+    
     const fetchAdminPhone = async () => {
       try {
         // Get the first admin user's phone number
         const { data: users, error } = await supabase
           .from('users')
           .select('phone')
+          .eq('property_id', propertyId)
           .eq('is_admin', true)
           .limit(1)
         
@@ -36,7 +41,7 @@ const WhatsAppWidget: React.FC = () => {
     }
     
     fetchAdminPhone()
-  }, [])
+  }, [propertyId])
   
   const predefinedMessages = [
     'Hello! I would like to make a reservation.',

@@ -1,6 +1,7 @@
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { usePropertyId } from '../contexts/PropertyContext';
 
 interface HouseRule {
   id: number;
@@ -12,10 +13,13 @@ interface HouseRule {
 const HouseRules: React.FC = () => {
   const [houseRules, setHouseRules] = useState<HouseRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const propertyId = usePropertyId();
 
   useEffect(() => {
-    fetchHouseRules();
-  }, []);
+    if (propertyId) {
+      fetchHouseRules();
+    }
+  }, [propertyId]);
 
   const fetchHouseRules = async () => {
     try {
@@ -23,6 +27,7 @@ const HouseRules: React.FC = () => {
       const { data, error } = await supabase
         .from('house_rules')
         .select('id, rule_text, order_num, is_active')
+        .eq('property_id', propertyId)
         .eq('is_active', true)
         .order('order_num', { ascending: true });
 

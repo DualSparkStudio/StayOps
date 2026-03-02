@@ -1,6 +1,7 @@
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { usePropertyId } from '../contexts/PropertyContext';
 
 interface FAQ {
   id: number;
@@ -14,10 +15,13 @@ const FAQ: React.FC = () => {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const propertyId = usePropertyId();
 
   useEffect(() => {
-    fetchFAQs();
-  }, []);
+    if (propertyId) {
+      fetchFAQs();
+    }
+  }, [propertyId]);
 
   const fetchFAQs = async () => {
     try {
@@ -25,6 +29,7 @@ const FAQ: React.FC = () => {
       const { data, error } = await supabase
         .from('faqs')
         .select('*')
+        .eq('property_id', propertyId)
         .eq('is_active', true)
         .order('order_num', { ascending: true });
 
